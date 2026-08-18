@@ -2,6 +2,7 @@ import { formatValue } from "../core/formatter";
 import { createAccent } from "../core/styler";
 import type { Styler } from "../core/types";
 import { ConsoleTransport } from "../transports/console";
+import { TransportManager } from "../transports/manager";
 import type {
   FormattedLogRecord,
   LogRecord,
@@ -110,9 +111,7 @@ function applyThemeStyles(
     const style = current[styleName as keyof Styler];
 
     if (typeof style !== "function") {
-      throw new TypeError(
-        `Unknown logAccent theme style "${styleName}".`,
-      );
+      throw new TypeError(`Unknown logAccent theme style "${styleName}".`);
     }
 
     current = style as Styler;
@@ -138,51 +137,29 @@ function formatRecord(
   const parts: string[] = [];
 
   if (options.timestamps) {
-    parts.push(
-      accent.gray(`[${record.timestamp.toISOString()}]`),
-    );
+    parts.push(accent.gray(`[${record.timestamp.toISOString()}]`));
   }
 
   if (record.scope) {
-    parts.push(
-      accent.cyan.bold(`[${record.scope}]`),
-    );
+    parts.push(accent.cyan.bold(`[${record.scope}]`));
   }
 
-  const levelText = [
-    options.icons ? theme.icon : "",
-    theme.label,
-  ]
+  const levelText = [options.icons ? theme.icon : "", theme.label]
     .filter(Boolean)
     .join(" ");
 
-  parts.push(
-    applyThemeStyles(
-      accent,
-      theme.styles,
-      levelText,
-    ),
-  );
+  parts.push(applyThemeStyles(accent, theme.styles, levelText));
 
   if (record.message.length > 0) {
     parts.push(record.message);
   }
 
   if (record.data.length > 0) {
-    parts.push(
-      record.data
-        .map((value) => formatValue(value))
-        .join(" "),
-    );
+    parts.push(record.data.map((value) => formatValue(value)).join(" "));
   }
 
-  if (
-    record.context &&
-    Object.keys(record.context).length > 0
-  ) {
-    parts.push(
-      accent.dim(formatValue(record.context)),
-    );
+  if (record.context && Object.keys(record.context).length > 0) {
+    parts.push(accent.dim(formatValue(record.context)));
   }
 
   return {
@@ -191,9 +168,7 @@ function formatRecord(
   };
 }
 
-export function createLogger(
-  options: LoggerOptions = {},
-): Logger {
+export function createLogger(options: LoggerOptions = {}): Logger {
   const resolved: ResolvedLoggerOptions = {
     enabled: options.enabled ?? true,
     level: options.level ?? "debug",
@@ -202,21 +177,14 @@ export function createLogger(
     icons: options.icons ?? true,
     colors: options.colors ?? true,
     theme: options.theme ?? defaultTheme,
-    transports:
-      options.transports ?? [new ConsoleTransport()],
+    transports: options.transports ?? [new ConsoleTransport()],
     context: options.context ?? {},
   };
 
-  const pendingWrites = new Set<Promise<void>>();
+  const transportManager = new TransportManager(resolved.transports);
 
-  function write(
-    level: ActiveLogLevel,
-    values: readonly unknown[],
-  ): void {
-    if (
-      !resolved.enabled ||
-      !isLogLevelEnabled(level, resolved.level)
-    ) {
+  function write(level: ActiveLogLevel, values: readonly unknown[]): void {
+    if (!resolved.enabled || !isLogLevelEnabled(level, resolved.level)) {
       return;
     }
 
@@ -235,9 +203,7 @@ export function createLogger(
       message,
       data: remainingValues,
 
-      ...(resolved.scope !== undefined
-        ? { scope: resolved.scope }
-        : {}),
+      ...(resolved.scope !== undefined ? { scope: resolved.scope } : {}),
 
       ...(Object.keys(resolved.context).length > 0
         ? { context: resolved.context }
@@ -251,27 +217,7 @@ export function createLogger(
       theme: resolved.theme,
     });
 
-    for (const transport of resolved.transports) {
-      try {
-        const result = transport.write(formattedRecord);
-
-        if (result !== undefined) {
-          let pendingWrite: Promise<void>;
-
-          pendingWrite = Promise.resolve(result).finally(() => {
-            pendingWrites.delete(pendingWrite);
-          });
-
-          pendingWrites.add(pendingWrite);
-        }
-      } catch (error) {
-        // A failed logging transport should not normally crash the host app.
-        console.error(
-          `[logAccent] Transport "${transport.name}" failed:`,
-          error,
-        );
-      }
-    }
+    void transportManager.write(formattedRecord);
   }
 
   const logger: Logger = {
@@ -307,9 +253,7 @@ export function createLogger(
       const normalizedName = name.trim();
 
       if (!normalizedName) {
-        throw new TypeError(
-          "Logger scope cannot be empty.",
-        );
+        throw new TypeError("Logger scope cannot be empty.");
       }
 
       const nextScope = resolved.scope
@@ -357,18 +301,14 @@ export function createLogger(
       return {
         end(...values): TimerResult {
           if (ended) {
-            throw new Error(
-              `Timer "${normalizedLabel}" has already ended.`,
-            );
+            throw new Error(`Timer "${normalizedLabel}" has already ended.`);
           }
 
           ended = true;
 
-          const durationNanoseconds =
-            process.hrtime.bigint() - startedAt;
+          const durationNanoseconds = process.hrtime.bigint() - startedAt;
 
-          const durationMs =
-            Number(durationNanoseconds) / 1_000_000;
+          const durationMs = Number(durationNanoseconds) / 1_000_000;
 
           write("success", [
             `${normalizedLabel} completed in ${durationMs.toFixed(2)}ms`,
@@ -384,25 +324,11 @@ export function createLogger(
     },
 
     async flush() {
-      await Promise.allSettled(
-        Array.from(pendingWrites),
-      );
-
-      await Promise.allSettled(
-        resolved.transports.map(async (transport) => {
-          await transport.flush?.();
-        }),
-      );
+      await transportManager.flush();
     },
 
     async close() {
-      await logger.flush();
-
-      await Promise.allSettled(
-        resolved.transports.map(async (transport) => {
-          await transport.close?.();
-        }),
-      );
+      await transportManager.close();
     },
   };
 
@@ -411,8 +337,7 @@ export function createLogger(
 
 export const logger = createLogger({
   level:
-    typeof process !== "undefined" &&
-    process.env.NODE_ENV === "production"
+    typeof process !== "undefined" && process.env.NODE_ENV === "production"
       ? "warn"
       : "debug",
 });

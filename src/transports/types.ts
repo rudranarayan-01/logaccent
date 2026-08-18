@@ -1,7 +1,9 @@
 import type { LogLevel } from "../logger/levels";
 
+export type ActiveLogLevel = Exclude<LogLevel, "silent">;
+
 export interface LogRecord {
-  readonly level: Exclude<LogLevel, "silent">;
+  readonly level: ActiveLogLevel;
   readonly timestamp: Date;
   readonly scope?: string;
   readonly message: string;
@@ -16,9 +18,15 @@ export interface FormattedLogRecord extends LogRecord {
 export interface LogTransport {
   readonly name: string;
 
-  write(record: FormattedLogRecord): void | Promise<void>;
+  write(
+    record: FormattedLogRecord,
+  ): void | Promise<void>;
 
   flush?(): void | Promise<void>;
 
   close?(): void | Promise<void>;
+}
+
+export interface TransportOptions {
+  readonly enabled?: boolean;
 }

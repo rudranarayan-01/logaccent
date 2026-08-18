@@ -29,7 +29,7 @@ Unlike color-only libraries, logAccent provides semantic logging primitives that
 ## Installation
 
 ```bash
-npm install @rudranarayan/logaccent
+npm install @rudranarayan01/logaccent
 ```
 
 ---
@@ -184,7 +184,7 @@ Mask confidential information before logging.
 import {
     logger,
     redact
-} from "@rudranarayan/logaccent";
+} from "@rudranarayan01/logaccent";
 
 logger.info(
     "Authentication payload",
@@ -213,7 +213,7 @@ Output
 ```ts
 import {
     createLogger
-} from "@rudranarayan/logaccent";
+} from "@rudranarayan01/logaccent";
 
 const log =
     createLogger({
@@ -259,7 +259,7 @@ import {
     accent,
     logger,
     createLogger
-} from "@rudranarayan/logaccent";
+} from "@rudranarayan01/logaccent";
 ```
 
 No additional configuration is required.

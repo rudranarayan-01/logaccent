@@ -20,12 +20,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rudranarayan-spec/logaccent.git"
+    "url": "https://github.com/rudranarayan-01/logaccent.git"
   },
   "bugs": {
-    "url": "https://github.com/rudranarayan-spec/logaccent/issues"
+    "url": "https://github.com/rudranarayan-01/logaccent/issues"
   },
-  "homepage": "https://github.com/rudranarayan-spec/logaccent#readme",
+  "homepage": "https://github.com/rudranarayan-01/logaccent#readme",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

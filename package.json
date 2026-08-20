@@ -1,6 +1,6 @@
 {
   "name": "@rudranarayan01/logaccent",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Developer-friendly terminal styling and semantic logging for JavaScript and TypeScript.",
   "keywords": [
     "logger",

@@ -1,9 +1,4 @@
-import type {
-  Application,
-  NextFunction,
-  Request,
-  Response,
-} from "express";
+import type { Application, NextFunction, Request, Response } from "express";
 
 import type { Logger } from "../logger/logger";
 
@@ -48,11 +43,17 @@ export function setupExpressLogger(
     res.on("finish", () => {
       const duration = Date.now() - startedAt;
 
-      if (config.logResponses) {
-        logger.success(`${req.method} ${req.originalUrl}`, {
-          statusCode: res.statusCode,
-          duration: `${duration}ms`,
-        });
+      const payload = {
+        statusCode: res.statusCode,
+        duration: `${duration}ms`,
+      };
+
+      if (res.statusCode >= 500) {
+        logger.error(`${req.method} ${req.originalUrl}`, payload);
+      } else if (res.statusCode >= 400) {
+        logger.warn(`${req.method} ${req.originalUrl}`, payload);
+      } else {
+        logger.success(`${req.method} ${req.originalUrl}`, payload);
       }
     });
 
@@ -61,20 +62,25 @@ export function setupExpressLogger(
 
   // Global Express Error Middleware
   app.use(
-    (
-      error: unknown,
-      req: Request,
-      _res: Response,
-      next: NextFunction,
-    ) => {
+    (error: unknown, req: Request, res: Response, next: NextFunction): void => {
+      const err =
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+            }
+          : error;
+
       logger.error("Express request failed", {
         method: req.method,
         url: req.originalUrl,
         ip: req.ip,
-        body: req.body,
+        statusCode: res.statusCode || 500,
         query: req.query,
         params: req.params,
-        error,
+        body: req.body,
+        error: err,
       });
 
       next(error);

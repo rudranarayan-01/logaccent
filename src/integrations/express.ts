@@ -64,7 +64,7 @@ export function setupExpressLogger(
     (
       error: unknown,
       req: Request,
-      res: Response,
+      _res: Response,
       next: NextFunction,
     ) => {
       logger.error("Express request failed", {

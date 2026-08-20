@@ -332,6 +332,40 @@ logger.withContext()
 logger.time()
 ```
 
+## Express Integration
+
+Configure logAccent once in your Express server and automatically capture:
+
+- Incoming requests
+- Response status and duration
+- Route errors
+- Unhandled promise rejections
+- Uncaught exceptions
+
+```ts
+import express from "express";
+import {
+  createLogger,
+  FileTransport,
+  ConsoleTransport,
+  captureErrors,
+  setupExpressLogger,
+} from "@rudranarayan01/logaccent/node";
+
+const app = express();
+
+const logger = createLogger({
+  transports: [
+    new ConsoleTransport(),
+    new FileTransport({
+      directory: "./logs",
+    }),
+  ],
+});
+
+captureErrors(logger);
+setupExpressLogger(app, logger);
+```
 ---
 
 # Design Goals
